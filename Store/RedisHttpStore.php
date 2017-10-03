@@ -17,14 +17,16 @@ use Symfony\Component\HttpKernel\HttpCache\StoreInterface;
 class RedisHttpStore implements StoreInterface
 {
     protected $client;
+    protected $options;
     protected $digest_key_prefix;
     protected $metadata_key_prefix;
     protected $lock_key;
     protected $keyCache;
 
-    public function __construct($connection_params, $digest_key_prefix, $lock_key, $metadata_key_prefix)
+    public function __construct($connection_params, $options, $digest_key_prefix, $lock_key, $metadata_key_prefix)
     {
         $this->client = new Client($connection_params);
+        $this->options = $options;
         $this->digest_key_prefix = $digest_key_prefix;
         $this->lock_key = $lock_key;
         $this->metadata_key_prefix = $metadata_key_prefix;
@@ -309,7 +311,11 @@ class RedisHttpStore implements StoreInterface
     {
         $this->client->createConnection();
 
-        $this->client->set($key, $data);
+        if (isset($this->options['default_ttl']) && $this->options['default_ttl'] > 0) {
+            $this->client->setex($key, $this->options['default_ttl'], $data);
+        } else {
+            $this->client->set($key, $data);
+        }
 
         $this->client->close();
     }
